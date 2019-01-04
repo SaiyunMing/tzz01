@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>封装jquery插件</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			font-family: "Microsoft Yahei";
+		}
+
+		.box {
+			position: relative;
+			width: 1200px;
+			margin: 0 auto;
+		}
+
+		.item {
+			width: 232px;
+			position: absolute;
+			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+			overflow: hidden;
+		}
+
+		.item>img {
+			width: 100%;
+			display: block;
+		}
+
+		.item>p {
+			margin: 0;
+			padding: 10px;
+			background: #eee;
+		}
+
+		.btn {
+			width: 280px;
+			height: 40px;
+			margin: 30px auto;
+			text-align: center;
+			line-height: 40px;
+			background-color: #CCC;
+			border-radius: 6px;
+			font-size: 24px;
+			cursor: pointer;
+		}
+
+		.loading {
+			background-color: transparent;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="box">
+
+
+	</div>
+
+	<div class="btn">加载更多</div>
+
+	<script src="js/jquery-1.12.4.js"></script>
+	<script src="js/template-web.js"></script>
+	<!--2- 创建模板 -->
+	<script type="text/html" id="tmp">
+		{{each items v}}
+		<div class="item ">
+				<img src="{{ v.path }}" height="{{ v.height }}" alt="">
+				<p>{{ v.text }}</p>
+		</div>
+		{{/each}}
+	</script>
+
+	<script>
+		//3- 引入数据
+		var page = 1;
+		$('.btn').on('click', function () {
+			if ($('.btn').hasClass('loading')) {
+				return;
+			}
+
+			$('.btn').text('正在加载中..').addClass('loading');
+			$.ajax({
+				url: 'data.php',
+				type: 'get',
+				data: {
+					page: page,
+					pageSize: 10
+				},
+				dataType: 'json',
+				success: function (res) {
+					
+					console.log(res);
+					//接收字符串
+					var htmlstr = template('tmp', res)
+					//4-插入到页面中
+					$('.box').append(htmlstr);
+					// 给page重新赋值
+					page = res.page;
+					//响应成功了自动渲染
+					waterFall();
+					res.items.length ==10 ? $('.btn').text('加载更多').removeClass('loading') : $('.btn').text('我也是有底限的');
+
+				}
+			})
+		})
+
+		//
+		function waterFall() {
+			//父盒子宽度  子盒子宽度  间隔宽度
+			var boxWidth = $('.box').width();
+			var itemWidth = $('.item').width();
+			var gap = (boxWidth - itemWidth * 5) / 4;
+
+
+			//each => 遍历jQuery 对象
+			var arr = [];
+			$('.item').each(function (index, value) {
+				if (index < 5) {
+					arr[index] = $(value).height();
+
+					//给第一行设置位置
+					$(value).css({
+						top: 0,
+						left: index * (itemWidth + gap)
+					})
+				} else {
+
+					//每一行盒子都是添加到上一行高度最小的盒子下面
+					var min = arr[0];
+					var minIndex = 0;
+					arr.forEach(function (value, index, arr) {
+						if (value < min) {
+							min = value;
+							minIndex = index;
+						}
+					})
+					//给后面的图片设置位置
+					$(value).css({
+						top: min + gap,
+						left: minIndex * (itemWidth + gap)
+					})
+					arr[minIndex] = min + gap + $(value).height();
+				}
+				//给父盒子设置高度,把按钮挤到下方
+				
+				$('.box').height($('.item:last-child').offset().top + $(value).height())
+
+
+			})
+		}
+
+		//打开页面自动加载一页
+
+		$('.btn').click();
+
+		//监听滚动条
+		$(window).scroll(function () {
+			if ($(window).height() + $(window).scrollTop() > $('.item:last-child').offset().top) {
+				$('.btn').click();
+			}
+		})
+
+
+	</script>
+</body>
+
+
+</html>
